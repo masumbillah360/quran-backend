@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { getDatabase } from './db/schema';
 
 const app = new Hono()
 
@@ -10,5 +11,13 @@ const welcomeStrings = [
 app.get('/', (c) => {
   return c.text(welcomeStrings.join('\n\n'))
 })
+
+app.get('/test', async (c) => {
+    const db = getDatabase();
+    let countQuery = 'SELECT COUNT(*) as total FROM surahs';
+    const count: any = db.prepare(countQuery).get();
+    db.close();
+    return c.text(`DB hit's successfully : ${count.total}`);
+});
 
 export default app

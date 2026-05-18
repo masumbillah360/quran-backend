@@ -1,12 +1,16 @@
 {
-  "name": "hono",
-  "type": "module",
-  "dependencies": {
-    "hono": "^4.12.19"
-  },
-  "devDependencies": {
-    "@types/node": "^20.11.17",
-    "tsx": "^4.7.1",
-    "typescript": "^5.8.3"
-  }
+    "name": "hono",
+    "type": "module",
+    "dependencies": {
+        "hono": "^4.12.19"
+    },
+    "scripts": {
+        "start": "bun src/index.ts"
+    },
+    "devDependencies": {
+        "@types/bun": "^1.3.14",
+        "@types/node": "^25.8.0",
+        "tsx": "^4.7.1",
+        "typescript": "^6.0.3"
+    }
 }
