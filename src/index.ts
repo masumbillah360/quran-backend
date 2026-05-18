@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { getDatabase } from './db/schema';
+import surahRoutes from './routes/surahs';
 
 const app = new Hono()
 
@@ -19,5 +20,8 @@ app.get('/test', async (c) => {
     db.close();
     return c.text(`DB hit's successfully : ${count.total}`);
 });
+
+// Routes
+app.route('/api/v1/surahs', surahRoutes);
 
 export default app
