@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { getDatabase } from './db/schema';
-import surahRoutes from './routes/surahs';
+import surahRoutes from './routes/surahs.routes';
+import ayahRoutes from './routes/ayahs.routes';
 
 const app = new Hono()
 
@@ -23,5 +24,6 @@ app.get('/test', async (c) => {
 
 // Routes
 app.route('/api/v1/surahs', surahRoutes);
+app.route('/api/v1/ayahs', ayahRoutes);
 
 export default app
