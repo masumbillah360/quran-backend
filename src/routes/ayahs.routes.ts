@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { stream } from 'hono/streaming';
 import { getSurahFull } from '../db/queries';
+import { getDatabase } from '../db/schema';
 
 const ayahs = new Hono();
 
@@ -21,6 +22,20 @@ ayahs.get('/:surahNumber', async (c) => {
             return c.json({ success: false, error: 'Surah not found' }, 404);
         }
 
+        const db = getDatabase();
+        const audio: any[] = db
+            .prepare(
+                `
+            SELECT a.ayah_number, au.audio_url, au.duration, au.reciter
+            FROM audio au
+            JOIN ayahs a ON au.ayah_id = a.id
+            WHERE a.surah_id = (SELECT id FROM surahs WHERE number = ?)
+            ORDER BY a.ayah_number
+        `,
+            )
+            .all(surahNumber);
+        db.close();
+
         const { ayahs, ...meta } = detail;
 
         if (c.req.query('stream') === 'true') {
@@ -38,7 +53,7 @@ ayahs.get('/:surahNumber', async (c) => {
 
         return c.json({
             success: true,
-            data: { meta, ayahs },
+            data: { meta, ayahs, audio },
         });
     } catch (error) {
         return c.json({ success: false, error: 'Failed to load surah' }, 500);
