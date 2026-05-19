@@ -1,7 +1,6 @@
 # dev
 .yarn/
 !.yarn/releases
-.vscode/*
 !.vscode/launch.json
 !.vscode/*.code-snippets
 .idea/workspace.xml
@@ -14,8 +13,6 @@ wrangler.jsonc
 node_modules/
 
 # env
-.env
-.env.production
 
 # logs
 logs/
@@ -29,3 +26,4 @@ lerna-debug.log*
 # misc
 .DS_Store
 .vercel
+config.bat
