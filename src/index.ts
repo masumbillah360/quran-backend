@@ -1,46 +1,25 @@
 import { Hono } from 'hono'
-import { getDatabase } from './db/schema';
-import surahRoutes from './routes/surahs.routes';
-import ayahRoutes from './routes/ayahs.routes';
-import searchRoutes from './routes/search.routes';
-import { cors } from 'hono/cors';
-import { logger } from 'hono/logger';
+import { cors } from 'hono/cors'
+import { cache } from 'hono/cache'
+import surahRoutes from './routes/surahs.routes'
+import searchRoutes from './routes/search.routes'
 
-const app = new Hono()
+const app = new Hono<{ Bindings: CloudflareBindings }>()
 
-const welcomeStrings = [
-  'Hello Hono!',
-  'To learn more about Hono on Vercel, visit https://vercel.com/docs/frameworks/backend/hono'
-]
-app.use('*', logger());
-app.use(
-    '*',
-    cors({
-        origin: [
-            'http://localhost:3000',
-            'http://localhost:3001',
-            'https://*.vercel.app',
-            'https://*.netlify.app',
-        ],
-        allowMethods: ['GET', 'POST', 'OPTIONS'],
-        allowHeaders: ['Content-Type'],
-    }),
-);
-app.get('/', (c) => {
-  return c.text(welcomeStrings.join('\n\n'))
-})
+app.use('*', cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001', 'https://quran-frontend-six.vercel.app'],
+  allowMethods: ['GET', 'OPTIONS'],
+  allowHeaders: ['Content-Type'],
+}))
 
-app.get('/test', async (c) => {
-    const db = getDatabase();
-    let countQuery = 'SELECT COUNT(*) as total FROM surahs';
-    const count: any = db.prepare(countQuery).get();
-    db.close();
-    return c.text(`DB hit's successfully : ${count.total}`);
-});
+app.use('/api/*', cache({
+  cacheName: 'quran-api',
+  cacheControl: 'max-age=3600',
+}))
 
-// Routes
-app.route('/api/surahs', surahRoutes);
-app.route('/api/ayahs', ayahRoutes);
-app.route('/api/search', searchRoutes);
+app.get('/', (c) => c.text('Quran API - Cloudflare Workers'))
+
+app.route('/api/surahs', surahRoutes)
+app.route('/api/search', searchRoutes)
 
 export default app

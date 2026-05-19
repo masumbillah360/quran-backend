@@ -1,21 +1,49 @@
-import { Hono } from 'hono';
-import { getDatabase } from '../db/schema';
+import { Hono } from 'hono'
+import { normalizeArabic } from '../utils'
+import type { SearchResult } from '../types'
 
-const search = new Hono();
+const searchRoutes = new Hono<{ Bindings: CloudflareBindings }>()
 
-search.get('/', async (c) => {
+searchRoutes.get('/', async (c) => {
     try {
-        const q = c.req.query('q')?.trim();
+        const q = c.req.query('q')?.trim()
         if (!q) {
-            return c.json({ success: true, data: [] });
+            return c.json({ success: true, data: [] })
         }
 
-        const db = getDatabase();
+        const db = c.env['holy-quran']
+        const results: SearchResult[] = []
 
-        const rows: any[] = db
+        const qLower = q.toLowerCase()
+        const qNorm = normalizeArabic(q)
+
+        const surahsResult = await db
+            .prepare('SELECT * FROM surahs ORDER BY number')
+            .all()
+
+        for (const surah of (surahsResult.results as any[])) {
+            const nameNorm = normalizeArabic(surah.name)
+            const matchesName =
+                surah.english_name.toLowerCase().includes(qLower) ||
+                surah.english_translation.toLowerCase().includes(qLower) ||
+                nameNorm.includes(qNorm)
+
+            if (matchesName) {
+                results.push({
+                    type: 'surah',
+                    surahNumber: surah.number,
+                    surahEnglishName: surah.english_name,
+                    surahArabicName: surah.name,
+                    matchType: nameNorm.includes(qNorm) ? 'name' : 'english',
+                })
+            }
+        }
+
+        const ayahsResult = await db
             .prepare(`
-                SELECT a.verse_key, a.text_uthmani, t.translation,
-                       s.english_name, s.number as surah_number
+                SELECT a.verse_key, a.ayah_number, a.text_indopak, a.text_uthmani,
+                       t.translation, s.number as surah_number, s.english_name as surah_english,
+                       s.name as surah_arabic
                 FROM translations t
                 JOIN ayahs a ON t.ayah_id = a.id
                 JOIN surahs s ON a.surah_id = s.id
@@ -23,22 +51,32 @@ search.get('/', async (c) => {
                 ORDER BY s.number, a.ayah_number
                 LIMIT 50
             `)
-            .all(`%${q}%`);
+            .bind(`%${q}%`)
+            .all()
 
-        db.close();
+        for (const row of (ayahsResult.results as any[])) {
+            const arabicText = row.text_indopak || row.text_uthmani || ''
+            const arabicNorm = normalizeArabic(arabicText)
+            const matchesArabic = arabicNorm.includes(qNorm)
 
-        const results = rows.map((row) => ({
-            verseKey: row.verse_key,
-            textUthmani: row.text_uthmani,
-            translation: row.translation,
-            surahEnglishName: row.english_name,
-            surahNumber: row.surah_number,
-        }));
+            results.push({
+                type: 'ayah',
+                surahNumber: row.surah_number,
+                surahEnglishName: row.surah_english,
+                surahArabicName: row.surah_arabic,
+                ayahNumber: row.ayah_number,
+                verseKey: row.verse_key,
+                arabicText: arabicText || undefined,
+                translation: row.translation || undefined,
+                matchType: matchesArabic ? 'arabic' : 'translation',
+            })
+        }
 
-        return c.json({ success: true, data: results });
+        return c.json({ success: true, data: results })
     } catch (error) {
-        return c.json({ success: false, error: 'Search failed' }, 500);
+        console.error('Search error:', error)
+        return c.json({ success: false, error: 'Search failed' }, 500)
     }
-});
+})
 
-export default search;
+export default searchRoutes

@@ -8,6 +8,8 @@
 .idea/usage.statistics.xml
 .idea/shelf
 
+wrangler.jsonc
+.wrangler
 # deps
 node_modules/
 
